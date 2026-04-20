@@ -30,7 +30,7 @@ To ensure signal stability and clean RF injection, the following components are 
 * **R1 (Attenuator):** `4.7kΩ` resistor in series after C2 (adjust this value to control signal strength into the radio).
 
 ---
-
+🟢 Added: I2C Pull-Up Resistors RequirementThe LTC6904 uses an open-drain I2C bus. This means the chip can only pull the lines LOW; it cannot pull them HIGH. Therefore, you must add two pull-up resistors to the SDA and SCL lines for the communication to work.Values: Use 4.7kΩ resistors (standard for 400kHz I2C).Connection: * One resistor from SDA (GPIO 21) to 3.3V.One resistor from SCL (GPIO 22) to 3.3V.Note: Some ESP32 development boards (like some versions of the DevKit V1) have internal pull-ups that can be enabled via software, but for RF stability and reliable I2C switching, external physical resistors are strongly recommended.Actualización del Diagrama de Conexiones (Markdown Table)LTC6904 PinFunctionConnection3SCLGPIO 22 + 4.7kΩ Resistor to 3.3V4SDAGPIO 21 + 4.7kΩ Resistor to 3.3V
 ## 🖥️ Frequency Configuration Utility
 
 The chip requires a specific 16-bit configuration (4 bits for the Octave, 10 bits for the DAC, and 2 bits for the Output mode). 
