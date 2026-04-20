@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LTC6904 Master - ULTRA FIX</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: #eee; display: flex; justify-content: center; padding-top: 50px; }
+        .card { background: #2d2d2d; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); width: 380px; text-align: center; border: 1px solid #444; }
+        input { width: 80%; font-size: 1.8rem; padding: 10px; border: none; border-radius: 8px; margin-bottom: 20px; text-align: center; background: #444; color: #00ff00; font-family: monospace; }
+        button { width: 100%; background: #27ae60; color: white; border: none; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #2ecc71; box-shadow: 0 0 15px #2ecc71; }
+        #res { margin-top: 25px; text-align: left; background: #1e1e1e; padding: 20px; border-radius: 10px; border-left: 5px solid #27ae60; font-family: 'Courier New', monospace; line-height: 1.6; color: #00ff00; }
+        .label { color: #888; font-size: 0.9rem; text-transform: uppercase; }
+        .val { color: #fff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>LTC6904 MASTER CALC</h2>
+        <p class="label">Target MHz (Use point or comma):</p>
+        <input type="text" id="freq" value="12.697" autocomplete="off">
+        <button onclick="calculate()">CALCULAR BYTES</button>
+        <div id="res">READY...</div>
+    </div>
+
+    <script>
+        function calculate() {
+            // 1. Limpieza radical de entrada
+            let input = document.getElementById('freq').value;
+            // Reemplaza comas por puntos y elimina cualquier cosa que no sea número o punto
+            let cleanInput = input.replace(',', '.').replace(/[^0-9.]/g, '');
+            let fMHz = parseFloat(cleanInput);
+            
+            if (isNaN(fMHz) || fMHz <= 0) {
+                alert("Error: Entrada no válida");
+                return;
+            }
+
+            // Trabajamos siempre en Hz para máxima precisión
+            let fHz = fMHz * 1000000;
+            let oct = 0;
+
+            // 2. BUSCADOR DE OCTAVA POR RANGOS DE MHz (Basado en Datasheet)
+            if (fMHz < 0.002) oct = 0;
+            else if (fMHz < 0.004) oct = 1;
+            else if (fMHz < 0.008) oct = 2;
+            else if (fMHz < 0.016) oct = 3;
+            else if (fMHz < 0.033) oct = 4;
+            else if (fMHz < 0.066) oct = 5;
+            else if (fMHz < 0.133) oct = 6;
+            else if (fMHz < 0.266) oct = 7;
+            else if (fMHz < 0.532) oct = 8;
+            else if (fMHz < 1.064) oct = 9;
+            else if (fMHz < 2.128) oct = 10;
+            else if (fMHz < 4.256) oct = 11;
+            else if (fMHz < 8.512) oct = 12; // <--- 12.697 MHz DEBE CAER AQUÍ
+            else if (fMHz < 17.023) oct = 13;
+            else if (fMHz < 34.046) oct = 14;
+            else oct = 15;
+
+            // 3. CÁLCULO DEL DAC (0-1023)
+            // Fórmula: f = 2^oct * (2048/(2048-DAC)) * 1.039 kHz
+            // Despejando DAC: DAC = 2048 - ( (2^oct * 2048 * 1039) / f_Hz )
+            let dac = Math.round(2048 - ( (Math.pow(2, oct) * 2048 * 1039) / (fHz / 1) ));
+
+            // Límites de seguridad
+            if (dac < 0) dac = 0;
+            if (dac > 1023) dac = 1023;
+
+            // 4. BYTES HEX
+            let msb = (oct << 4) | (dac >> 6);
+            let lsb = ((dac & 0x3F) << 2) | 1;
+
+            let fReal = (Math.pow(2, oct) * (2048 / (2048 - dac)) * 1.039) / 1000;
+
+            document.getElementById('res').innerHTML = 
+                "<span class='label'>Octave:</span> <span class='val'>" + oct + "</span><br>" +
+                "<span class='label'>DAC Value:</span> <span class='val'>" + dac + "</span><br><br>" +
+                "<span class='label'>HEX MSB:</span> <span style='color:#ff00ff; font-weight:bold'>0x" + msb.toString(16).toUpperCase().padStart(2,'0') + "</span><br>" +
+                "<span class='label'>HEX LSB:</span> <span style='color:#ff00ff; font-weight:bold'>0x" + lsb.toString(16).toUpperCase().padStart(2,'0') + "</span><br><br>" +
+                "<span class='label'>Real Freq:</span> <span class='val'>" + fReal.toFixed(6) + " MHz</span>";
+        }
+    </script>
+</body>
+</html>
