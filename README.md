@@ -3,7 +3,7 @@
 
 This project provides a complete solution for controlling the **LTC6904** programmable oscillator using an **ESP32** via the **I2C** protocol. It is specifically designed for RF applications, such as replacing crystals in vintage radios or generating precise BFO signals from **1 kHz to 68 MHz**.
 
-once programmed it will remember the set frequency and will work as a standalone device.
+Once programmed it will remember the set frequency and will work as a standalone device.
 ## 🛠️ Hardware Specifications
 
 ### 1. Pinout Mapping
