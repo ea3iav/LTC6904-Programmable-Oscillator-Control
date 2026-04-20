@@ -1,94 +1,104 @@
-# LTC6904-Programmable-Oscillator-Control
-This project provides a complete solution for controlling the LTC6904 programmable oscillator using an ESP32 via the I2C protocol. It is specifically designed for radio frequency (RF) applications, such as replacing crystals in vintage radios or generating precise clock signals from 1 kHz to 68 MHz.
-
 
 # LTC6904 Programmable Oscillator Control via ESP32
 
-This project provides a complete solution for controlling the **LTC6904** programmable oscillator using an **ESP32** via the **I2C** protocol. Ideal for RF applications, such as replacing crystals in vintage radios (e.g., Southcom 130) or generating precise clock signals from **1 kHz to 68 MHz**.
+This project provides a complete solution for controlling the **LTC6904** programmable oscillator using an **ESP32** via the **I2C** protocol. It is specifically designed for RF applications, such as replacing crystals in vintage radios or generating precise BFO signals from **1 kHz to 68 MHz**.
 
 ## 🛠️ Hardware Specifications
 
 ### 1. Pinout Mapping
-The **LTC6904** is the I2C version (not to be confused with the SPI-based LTC6903). Both AD1 and AD2 must be grounded to set the default I2C address.
+The **LTC6904** is the I2C version of this silicon oscillator. For this project, we ground both address pins (AD1, AD2) to use the default I2C address.
 
 | LTC6904 Pin | Function | ESP32 / Circuit Connection |
 | :--- | :--- | :--- |
 | **1** | **GND** | Common Ground |
-| **2** | **AD2** | GND (Sets I2C Address to `0x17`) |
-| **3** | **SCL** | GPIO 22 |
-| **4** | **SDA** | GPIO 21 |
-| **5** | **AD1** | GND (Sets I2C Address to `0x17`) |
+| **2** | **AD2** | Ground (Sets I2C Address to `0x17`) |
+| **3** | **SCL** | GPIO 22 **+ 4.7kΩ Pull-up to 3.3V** |
+| **4** | **SDA** | GPIO 21 **+ 4.7kΩ Pull-up to 3.3V** |
+| **5** | **AD1** | Ground (Sets I2C Address to `0x17`) |
 | **6** | **CLK** | **RF Signal Output** |
 | **7** | **CLK** | No Connection (Inverted Output) |
-| **8** | **VCC** | **3.3V DC** (Do NOT use 5V) |
+| **8** | **VCC** | **3.3V DC** (Warning: 5V will damage the chip) |
 
-### 2. Required Components & Values
-To ensure signal stability and clean RF injection, the following components are required:
+### 2. Critical Components (RF Conditioning)
+To ensure I2C stability and clean RF injection, you must include:
 
-* **C1 (Decoupling):** `0.1µF` ceramic capacitor between Pin 8 and Pin 1.
-* **C2 (DC Block):** `470pF` ceramic capacitor in series with Pin 6.
-* **R1 (Attenuator):** `4.7kΩ` resistor in series after C2 (adjust this value to control signal strength into the radio).
+* **I2C Pull-ups:** Two **4.7kΩ resistors** connecting SDA and SCL lines to 3.3V. Without these, the ESP32 will fail to detect the chip.
+* **Decoupling:** A **0.1µF** ceramic capacitor between Pin 8 (VCC) and Pin 1 (GND).
+* **DC Block:** A **470pF** capacitor in series with the Output (Pin 6).
+* **Attenuator:** A **4.7kΩ resistor** in series after the DC block to match the radio's input levels.
 
 ---
-🟢 Added: I2C Pull-Up Resistors RequirementThe LTC6904 uses an open-drain I2C bus. This means the chip can only pull the lines LOW; it cannot pull them HIGH. Therefore, you must add two pull-up resistors to the SDA and SCL lines for the communication to work.Values: Use 4.7kΩ resistors (standard for 400kHz I2C).Connection: * One resistor from SDA (GPIO 21) to 3.3V.One resistor from SCL (GPIO 22) to 3.3V.Note: Some ESP32 development boards (like some versions of the DevKit V1) have internal pull-ups that can be enabled via software, but for RF stability and reliable I2C switching, external physical resistors are strongly recommended.Actualización del Diagrama de Conexiones (Markdown Table)LTC6904 PinFunctionConnection3SCLGPIO 22 + 4.7kΩ Resistor to 3.3V4SDAGPIO 21 + 4.7kΩ Resistor to 3.3V
-## 🖥️ Frequency Configuration Utility
 
-The chip requires a specific 16-bit configuration (4 bits for the Octave, 10 bits for the DAC, and 2 bits for the Output mode). 
+## 🖥️ Frequency Calculator (HTML Utility)
 
-### How to use the Calculator:
-1.  Open the included `LTC6904_Calculator.html` in your browser.
-2.  Type your target frequency (e.g., `12.697`).
-3.  Copy the generated **MSB** and **LSB** Hex values.
+The LTC6904 requires a 16-bit configuration word (Octave + DAC + Output Mode). Use the included **`LTC6904_Calculator.html`** to generate these values.
 
-> **Note:** If the calculator seems stuck on low frequencies, clear your browser cache or rename the HTML file.
+1.  Open the HTML file in your browser.
+2.  Enter your target frequency (e.g., `12.697` MHz).
+3.  Copy the generated **MSB** and **LSB** Hex values (e.g., `0xCA` and `0xB5`).
+
+> **Note:** If the frequency feels "stuck" at 11 MHz or 16 kHz in the app, ensure you have cleared your browser cache or renamed the HTML file to force a refresh of the calculation logic.
 
 ---
 
 ## 💻 ESP32 Firmware (Arduino)
 
-Copy this code into the Arduino IDE. Replace `regMSB` and `regLSB` with the values from the calculator.
+Replace `regMSB` and `regLSB` with the values obtained from the calculator.
 
 ```cpp
 #include <Wire.h>
 
-// I2C Address when AD1/AD2 are grounded
+// Default I2C Address when AD1 and AD2 are tied to GND
 const int LTC_ADDR = 0x17; 
 
-// --- GENERATED VALUES FROM CALCULATOR ---
-byte regMSB = 0xCA;  // Example for 12.697 MHz
-byte regLSB = 0xB5;  // Example for 12.697 MHz
-// -----------------------------------------
+// --- VALUES GENERATED BY THE CALCULATOR ---
+byte regMSB = 0xCA;  // Replace with your MSB
+byte regLSB = 0xB5;  // Replace with your LSB
+// -------------------------------------------
 
 void setup() {
-  Wire.begin(21, 22); // Initialize I2C (SDA, SCL)
   Serial.begin(115200);
   
+  // Initialize I2C (SDA=21, SCL=22)
+  Wire.begin(21, 22); 
   delay(1000);
-  Serial.println("Programming LTC6904...");
+  
+  Serial.println("LTC6904 I2C Programmer");
 
+  // Step 1: Verify the chip is connected
+  Wire.beginTransmission(LTC_ADDR);
+  if (Wire.endTransmission() != 0) {
+    Serial.println("ERROR: LTC6904 not found!");
+    Serial.println("Check: 1. Pull-up resistors (4.7k), 2. Wiring, 3. 3.3V Power.");
+    while(1); 
+  }
+
+  // Step 2: Send Frequency Data
   Wire.beginTransmission(LTC_ADDR);
   Wire.write(regMSB); 
   Wire.write(regLSB);
   
   if (Wire.endTransmission() == 0) {
-    Serial.println("Success: Frequency Loaded.");
+    Serial.println("SUCCESS: Frequency data loaded to LTC6904.");
+    Serial.print("Programmed Bytes: ");
+    Serial.print(regMSB, HEX); Serial.print(" "); Serial.println(regLSB, HEX);
   } else {
-    Serial.println("Error: Device not found.");
+    Serial.println("FAILED: Communication error during programming.");
   }
 }
 
 void loop() {
-  // Output is stable once programmed.
+  // Output remains stable. No further action needed.
 }
 ```
 
 ---
 
-## ⚠️ Implementation Checklist
+## ⚠️ Troubleshooting Checklist
 
-- [ ] **Voltage Check:** Ensure the LTC6904 is powered by **3.3V**. 5V will damage the chip.
-- [ ] **I2C Pull-ups:** If your ESP32 board doesn't have them, add $4.7k\Omega$ resistors from SDA and SCL to 3.3V.
-- [ ] **Filtering:** Never inject the signal directly without the `470pF` capacitor to avoid sending DC current into the radio's mixer.
-- [ ] **Address Check:** If the serial monitor says "Device not found", verify that Pins 2 and 5 are strictly connected to GND.
+* **I2C Scan Fails:** Ensure you have **physical** 4.7kΩ resistors on the SCL/SDA lines. The ESP32 internal pull-ups are often insufficient for this chip.
+* **Wrong Frequency:** If the output is way off, check if you accidentally used an **LTC6903** (SPI version) instead of the **LTC6904** (I2C version).
+* **Heat & Drift:** If the frequency drifts more than 1%, ensure the chip is away from heat sources like the ESP32 voltage regulator or radio power transistors.
+* **No Signal:** Verify that the DC blocking capacitor (470pF) is present. Connecting Pin 6 directly to a grounded circuit will kill the output signal.
 
 ---
