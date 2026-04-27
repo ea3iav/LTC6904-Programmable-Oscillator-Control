@@ -12,12 +12,11 @@ The **LTC6904** is the I2C version of this silicon oscillator. For this project,
 | LTC6904 Pin | Function | ESP32 / Circuit Connection |
 | :--- | :--- | :--- |
 | **1** | **GND** | Common Ground |
-| **2** | **AD2** | Ground (Sets I2C Address to `0x17`) |
+| **2** | **SDA** | GPIO 21 **+ 4.7kΩ Pull-up to 3.3V** |
 | **3** | **SCL** | GPIO 22 **+ 4.7kΩ Pull-up to 3.3V** |
-| **4** | **SDA** | GPIO 21 **+ 4.7kΩ Pull-up to 3.3V** |
-| **5** | **AD1** | Ground (Sets I2C Address to `0x17`) |
+| **4** | **AD1** | Ground (Sets I2C Address to `0x17`) |
 | **6** | **CLK** | **RF Signal Output** |
-| **7** | **CLK** | No Connection (Inverted Output) |
+| **7** | **OE** | **3.3V DC**  |
 | **8** | **VCC** | **3.3V DC** (Warning: 5V will damage the chip) |
 
 ### 2. Critical Components (RF Conditioning)
